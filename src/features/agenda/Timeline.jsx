@@ -9,7 +9,6 @@ const generarHorarios = () => {
     const horaPad = h.toString().padStart(2, '0');
     horas.push(`${horaPad}:00`, `${horaPad}:30`);
   }
-  // Añadimos las 22:00 al final
   horas.push("22:00");
   return horas;
 };
@@ -37,7 +36,7 @@ export const Timeline = ({ citas, recargar }) => {
   const containerRef = useRef(null);
   
   const [nuevaCita, setNuevaCita] = useState({ 
-    estilista_id: '', hora: '09:00', cliente_id: '', duracion: 30, servicio_id: '' 
+    estilista_id: '', hora: '09:00', cliente_id: '', duracion: 30, servicio_id: '', notas: '' 
   });
   
   const { agendarCita } = useCitas();
@@ -60,7 +59,6 @@ export const Timeline = ({ citas, recargar }) => {
   useEffect(() => {
     if (datosCargados && containerRef.current) {
       const h = ahora.getHours();
-      // Ajuste de scroll automático para el nuevo rango (7am a 10pm)
       if (h >= 7 && h < 23) {
         const offset = (h - 7) * 128 + (ahora.getMinutes() >= 30 ? 64 : 0);
         containerRef.current.scrollTo({ top: offset - 100, behavior: 'smooth' });
@@ -68,12 +66,10 @@ export const Timeline = ({ citas, recargar }) => {
     }
   }, [datosCargados]);
 
-  // Cálculo de línea de tiempo ajustado al inicio de las 7:00 AM
   const offsetLinea = (() => {
     const h = ahora.getHours();
     const m = ahora.getMinutes();
     if (h < 7 || h >= 23) return null;
-    // 64px es el nuevo alto del header (h-16), cada fila h-16 (64px) x 2 (30min+30min) = 128px por hora
     return 64 + ((h - 7) * 128) + (m * 128 / 60); 
   })();
 
@@ -87,11 +83,12 @@ export const Timeline = ({ citas, recargar }) => {
       ...nuevaCita, 
       fecha_inicio: `${localISO}T${nuevaCita.hora}:00Z`, 
       duracion_minutos: parseInt(nuevaCita.duracion),
-      estatus: 'pendiente'
+      estatus: 'pendiente',
+      notas: nuevaCita.notas 
     });
     if (!error) {
       await recargar();
-      setNuevaCita({ ...nuevaCita, cliente_id: '', servicio_id: '' });
+      setNuevaCita({ ...nuevaCita, cliente_id: '', servicio_id: '', notas: '' });
     }
   };
 
@@ -112,9 +109,18 @@ export const Timeline = ({ citas, recargar }) => {
           if (cita.fecha_inicio.substring(11, 16) !== hora) return null;
           const bloques = (cita.duracion_minutos || 30) / 30;
           return (
-            <div key={cita.id} className={`absolute inset-x-1 top-1 rounded-xl border p-3 z-10 shadow-lg overflow-hidden ${cita.estatus === 'pagada' ? 'bg-emerald-900/40 text-emerald-400 border-emerald-900/50' : 'bg-[var(--color-secundario)] border-[var(--color-acento)]/30 text-[var(--color-acento)]'}`} style={{ height: `calc(${bloques * 100}% - 8px)` }}>
-              <p className="font-serif italic text-[13px] leading-tight truncate mb-1 text-[var(--color-texto-componente)]">{cita.clientes?.nombre}</p>
-              <p className="text-[9px] uppercase font-bold opacity-60 truncate tracking-widest">{cita.inventario?.nombre}</p>
+            <div key={cita.id} className={`absolute inset-x-1 top-1 rounded-xl border p-3 z-10 shadow-lg overflow-hidden flex flex-col justify-center ${cita.estatus === 'pagada' ? 'bg-emerald-900/40 text-emerald-400 border-emerald-900/50' : 'bg-[var(--color-secundario)] border-[var(--color-acento)]/30 text-[var(--color-acento)]'}`} style={{ height: `calc(${bloques * 100}% - 8px)` }}>
+              <p className="font-serif italic text-[13px] leading-tight truncate mb-0.5 text-[var(--color-texto-componente)]">{cita.clientes?.nombre}</p>
+              
+              {/* SERVICIO + COMENTARIO ENTRE PARÉNTESIS */}
+              <p className="text-[9px] uppercase font-bold opacity-60 tracking-widest leading-tight">
+                {cita.inventario?.nombre}
+                {cita.notas && (
+                  <span className="lowercase font-normal italic opacity-90 ml-1">
+                    ({cita.notas})
+                  </span>
+                )}
+              </p>
             </div>
           );
         })}
@@ -124,7 +130,6 @@ export const Timeline = ({ citas, recargar }) => {
 
   return (
     <div className="flex flex-col xl:flex-row gap-10 animate-in fade-in duration-500 p-4">
-      {/* FORMULARIO */}
       <div className="xl:w-96 flex-shrink-0">
         <div className="bg-[var(--color-componente)] p-10 rounded-[3rem] shadow-2xl border border-[var(--color-borde)] sticky top-32">
           <h3 className="font-serif italic text-3xl text-[var(--color-acento)] mb-8 text-center">Nueva Cita</h3>
@@ -164,6 +169,17 @@ export const Timeline = ({ citas, recargar }) => {
                 {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
               </select>
             </div>
+
+            <div>
+              <label className="text-[10px] font-bold opacity-50 uppercase ml-2 tracking-widest text-[var(--color-texto-componente)]">Notas / Comentarios</label>
+              <textarea 
+                className="w-full mt-2 p-4 bg-[var(--color-secundario)] rounded-2xl border border-[var(--color-borde)] text-[13px] text-[var(--color-texto-componente)] outline-none focus:border-[var(--color-acento)] transition-all resize-none h-20"
+                placeholder="Ej: Trae extensiones, tinte cobrizo..."
+                value={nuevaCita.notas}
+                onChange={e=>setNuevaCita({...nuevaCita, notas: e.target.value})}
+              />
+            </div>
+
             <button type="submit" className="w-full py-6 bg-[var(--color-acento)] text-[var(--color-texto-acento)] font-black uppercase text-[12px] tracking-[0.2em] rounded-2xl shadow-xl mt-6 active:scale-95 transition-all">Agendar ✨</button>
           </form>
         </div>
@@ -184,7 +200,7 @@ export const Timeline = ({ citas, recargar }) => {
 
           <table className="w-full border-collapse table-fixed">
             <thead className="sticky top-0 z-50 bg-[#0a0a0a] border-b-2 border-[var(--color-acento)]/50">
-              <tr className="h-16"> {/* HEADER MÁS PEQUEÑO EN VERTICAL */}
+              <tr className="h-16">
                 <th className="w-24 p-2 text-[10px] font-black opacity-70 uppercase tracking-widest text-[var(--color-texto-componente)] bg-[#0f0f0f]">Hora</th>
                 {estilistas.map(est => (
                   <th key={est.id} className="p-2 text-[var(--color-texto-componente)] font-serif italic text-[14px] border-l border-[var(--color-borde)] leading-tight">

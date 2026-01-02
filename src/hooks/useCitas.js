@@ -7,10 +7,11 @@ export function useCitas() {
       .insert([{
         cliente_id: nuevaCita.cliente_id,
         estilista_id: nuevaCita.estilista_id,
-        servicio_id: nuevaCita.servicio_id, // Asegurar que este campo se envíe
+        servicio_id: nuevaCita.servicio_id,
         fecha_inicio: nuevaCita.fecha_inicio,
         duracion_minutos: nuevaCita.duracion_minutos,
-        estatus: 'pendiente'
+        estatus: 'pendiente',
+        notas: nuevaCita.notas // <--- ESTA LÍNEA ES LA QUE FALTABA
       }])
       .select();
     return { data, error };

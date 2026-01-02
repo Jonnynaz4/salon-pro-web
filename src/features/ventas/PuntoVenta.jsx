@@ -28,12 +28,37 @@ export const PuntoVenta = ({ citasPendientes, alTerminar }) => {
     setCitaSeleccionada(cita);
     const item = catalogo.find(i => i.id === cita.servicio_id);
     const precio = parseFloat(item?.precio_venta || cita.inventario?.precio_venta || 0);
-    setCarrito([{ id: cita.servicio_id, nombre: item?.nombre || cita.inventario?.nombre, precio, cantidad: 1, tipo: 'servicio' }]);
+    // Usamos tempId para identificar líneas únicas y permitir edición/borrado
+    setCarrito([{ 
+      tempId: Date.now(),
+      id: cita.servicio_id, 
+      nombre: item?.nombre || cita.inventario?.nombre, 
+      precio, 
+      cantidad: 1, 
+      tipo: 'servicio' 
+    }]);
   };
 
   const agregarAlCarrito = (item) => {
     if (!citaSeleccionada) return alert("Selecciona una cita primero");
-    setCarrito([...carrito, { id: item.id, nombre: item.nombre, precio: parseFloat(item.precio_venta), cantidad: 1, tipo: item.tipo }]);
+    setCarrito([...carrito, { 
+      tempId: Date.now(),
+      id: item.id, 
+      nombre: item.nombre, 
+      precio: parseFloat(item.precio_venta), 
+      cantidad: 1, 
+      tipo: item.tipo 
+    }]);
+  };
+
+  const actualizarPrecio = (tempId, nuevoPrecio) => {
+    setCarrito(carrito.map(item => 
+      item.tempId === tempId ? { ...item, precio: parseFloat(nuevoPrecio) || 0 } : item
+    ));
+  };
+
+  const eliminarDelCarrito = (tempId) => {
+    setCarrito(carrito.filter(item => item.tempId !== tempId));
   };
 
   const totalMXN = carrito.reduce((acc, i) => acc + (i.precio * i.cantidad), 0);
@@ -61,7 +86,14 @@ export const PuntoVenta = ({ citasPendientes, alTerminar }) => {
       }]).select();
 
       if (!error && v) {
-        const detalles = carrito.map(i => ({ venta_id: v[0].id, inventario_id: i.id, cantidad: i.cantidad, precio_unitario: i.precio, subtotal: i.precio * i.cantidad, tipo: i.tipo }));
+        const detalles = carrito.map(i => ({ 
+          venta_id: v[0].id, 
+          inventario_id: i.id, 
+          cantidad: i.cantidad, 
+          precio_unitario: i.precio, 
+          subtotal: i.precio * i.cantidad, 
+          tipo: i.tipo 
+        }));
         await supabase.from('ventas_detalles').insert(detalles);
         await supabase.from('citas').update({ estatus: 'pagada' }).eq('id', citaSeleccionada.id);
         alert("Cobro exitoso ✨");
@@ -121,11 +153,26 @@ export const PuntoVenta = ({ citasPendientes, alTerminar }) => {
           </div>
           
           <div className="p-10 space-y-6 text-[var(--color-texto-componente)]">
-            <div className="space-y-4 max-h-[180px] overflow-y-auto border-b border-[var(--color-borde)] pb-6 custom-scrollbar">
-              {carrito.map((item, idx) => (
-                <div key={idx} className="flex justify-between items-center text-sm animate-in fade-in">
-                  <p className="font-serif italic opacity-80">{item.nombre}</p>
-                  <span className="font-black text-[var(--color-acento)]">${(item.precio * item.cantidad).toFixed(2)}</span>
+            {/* LISTA DE CARRITO EDITABLE */}
+            <div className="space-y-4 max-h-[250px] overflow-y-auto border-b border-[var(--color-borde)] pb-6 custom-scrollbar">
+              {carrito.map((item) => (
+                <div key={item.tempId} className="flex flex-col gap-1 py-3 border-b border-white/5 last:border-0 animate-in fade-in group">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => eliminarDelCarrito(item.tempId)} className="text-rose-500 opacity-0 group-hover:opacity-100 transition-opacity text-xs pr-1">✕</button>
+                      <p className="font-serif italic opacity-80 text-sm">{item.nombre}</p>
+                    </div>
+                    <div className="flex items-center text-[var(--color-acento)] font-black">
+                      <span className="text-sm mr-0.5">$</span>
+                      <input 
+                        type="number" 
+                        value={item.precio} 
+                        onChange={(e) => actualizarPrecio(item.tempId, e.target.value)}
+                        className="bg-transparent text-right font-black text-sm w-20 outline-none border-b border-transparent focus:border-[var(--color-acento)] transition-all p-0"
+                        step="0.01"
+                      />
+                    </div>
+                  </div>
                 </div>
               ))}
               {carrito.length === 0 && <p className="text-center opacity-30 text-[0.6em] uppercase font-bold tracking-widest py-4">Carrito vacío</p>}

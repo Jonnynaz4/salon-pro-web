@@ -172,8 +172,25 @@ function App() {
 
   return (
     <div style={estilosVariables} className="min-h-screen bg-[var(--color-fondo)] flex flex-col w-full font-[family-name:var(--fuente-p)] text-[var(--color-texto-general)]">
-      <header className="bg-[var(--color-componente)] border-b border-[var(--color-borde)] px-10 py-6 flex justify-between items-center sticky top-0 z-[110] shadow-2xl">
-        <h1 className="text-xl font-light tracking-[0.3em] text-white uppercase">Beauty <span className="italic font-serif text-[var(--color-acento)]">Atelier</span></h1>
+      <header className="bg-[var(--color-componente)] border-b border-[var(--color-borde)] px-10 py-2 flex justify-between items-center sticky top-0 z-[110] shadow-2xl min-h-[80px]">
+        
+        {/* LOGO AMPLIADO AL 90% DEL ALTO DEL MENU */}
+        <div className="flex items-center gap-6 cursor-pointer h-full" onClick={() => setTab('agenda')}>
+          <img 
+            src="/logo.png" 
+            alt="Logo Jonny Delgadillo" 
+            className="h-14 md:h-16 w-auto object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" 
+          />
+          <div className="flex flex-col justify-center">
+            <h1 className="text-base font-light tracking-[0.2em] text-white uppercase leading-none">
+              Jonny <span className="italic font-serif text-[var(--color-acento)]">Delgadillo</span>
+            </h1>
+            <span className="text-[8px] uppercase tracking-[0.4em] opacity-50 font-bold mt-1.5">
+              Hair Salon
+            </span>
+          </div>
+        </div>
+
         <nav className="flex gap-8 items-center text-[var(--color-texto-componente)]">
           {['agenda', 'ventas', 'vales', 'reportes', 'config'].map(t => (
             <button key={t} onClick={() => setTab(t)} className={`text-[10px] tracking-[0.2em] uppercase font-bold relative pb-2 transition-all ${tab === t ? 'text-[var(--color-acento)]' : 'opacity-60 hover:opacity-100 hover:text-[var(--color-acento)]'}`}>
@@ -194,4 +211,5 @@ function App() {
     </div>
   );
 }
+
 export default App;

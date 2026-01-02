@@ -113,7 +113,7 @@ export const PuntoVenta = ({ citasPendientes, alTerminar }) => {
       <div className="xl:w-1/3">
         <div className="bg-[var(--color-componente)] rounded-[4rem] shadow-2xl border border-[var(--color-borde)] overflow-hidden sticky top-32">
           <div className="bg-[var(--color-acento)] p-8 text-[var(--color-texto-acento)] text-center">
-            <h2 className="font-serif italic text-3xl tracking-wide">Caja Chic</h2>
+            <h2 className="font-serif italic text-3xl tracking-wide">Punto de Venta</h2>
             <div className="flex justify-center gap-6 mt-4 opacity-70 uppercase text-[0.6em] font-black tracking-[0.2em]">
               <div>MXN: ${totalMXN.toFixed(2)}</div>
               <div>USD: ${totalUSD.toFixed(2)}</div>

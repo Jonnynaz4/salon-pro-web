@@ -99,8 +99,8 @@ export const PanelConfiguracion = ({ tema, setTema }) => {
           { id: 'clientes', label: '👥 Clientes', desc: 'Directorio completo' }
         ].map(item => (
           <button key={item.id} onClick={() => setSeccion(item.id)} className={`w-full text-left p-6 rounded-[2rem] border transition-all ${seccion === item.id ? 'bg-[var(--color-acento)] text-[var(--color-texto-acento)] border-[var(--color-acento)] shadow-xl font-black' : 'bg-[var(--color-componente)] text-[var(--color-texto-componente)] border-[var(--color-borde)] hover:border-[var(--color-acento)]'}`}>
-            <p className="text-[10px] uppercase tracking-[0.2em]">{item.label}</p>
-            <p className="text-[8px] font-bold uppercase mt-1 opacity-50">{item.desc}</p>
+            <p className="uppercase tracking-[0.2em]">{item.label}</p>
+            <p className="font-bold uppercase mt-1 opacity-50" style={{ fontSize: '0.75em' }}>{item.desc}</p>
           </button>
         ))}
       </div>
@@ -111,8 +111,8 @@ export const PanelConfiguracion = ({ tema, setTema }) => {
             <div className="flex justify-between items-center mb-10 px-4">
               <h3 className="text-2xl font-serif italic text-[var(--color-texto-componente)] uppercase tracking-widest">Inventario</h3>
               <div className="flex bg-[var(--color-secundario)] p-1.5 rounded-2xl border border-[var(--color-borde)]">
-                <button onClick={() => setSubSeccion('registro')} className={`px-6 py-2.5 rounded-xl text-[9px] font-black uppercase transition-all ${subSeccion === 'registro' ? 'bg-[var(--color-acento)] text-[var(--color-texto-acento)]' : 'opacity-40'}`}>Nuevo</button>
-                <button onClick={() => setSubSeccion('historial')} className={`px-6 py-2.5 rounded-xl text-[9px] font-black uppercase transition-all ${subSeccion === 'historial' ? 'bg-[var(--color-acento)] text-[var(--color-texto-acento)]' : 'opacity-40'}`}>Historial</button>
+                <button onClick={() => setSubSeccion('registro')} className={`px-6 py-2.5 rounded-xl font-black uppercase transition-all ${subSeccion === 'registro' ? 'bg-[var(--color-acento)] text-[var(--color-texto-acento)]' : 'opacity-40'}`} style={{ fontSize: '0.8em' }}>Nuevo</button>
+                <button onClick={() => setSubSeccion('historial')} className={`px-6 py-2.5 rounded-xl font-black uppercase transition-all ${subSeccion === 'historial' ? 'bg-[var(--color-acento)] text-[var(--color-texto-acento)]' : 'opacity-40'}`} style={{ fontSize: '0.8em' }}>Historial</button>
               </div>
             </div>
 
@@ -127,19 +127,19 @@ export const PanelConfiguracion = ({ tema, setTema }) => {
                      <input type="number" className="p-4 rounded-xl bg-[var(--color-fondo)] border border-[var(--color-borde)] text-[var(--color-texto-componente)] font-bold" value={itemActual.cantidad} onChange={e => setItemActual({...itemActual, cantidad: e.target.value})} placeholder="Cantidad" />
                      <input type="number" className="p-4 rounded-xl bg-[var(--color-fondo)] border border-[var(--color-borde)] text-[var(--color-texto-componente)] font-bold" value={itemActual.costo_unitario} onChange={e => setItemActual({...itemActual, costo_unitario: e.target.value})} placeholder="Costo Unitario $" />
                    </div>
-                   <button onClick={agregarAlCarrito} className="w-full bg-[var(--color-acento)] text-[var(--color-texto-acento)] p-4 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:opacity-90 shadow-lg">+ Agregar</button>
+                   <button onClick={agregarAlCarrito} className="w-full bg-[var(--color-acento)] text-[var(--color-texto-acento)] p-4 rounded-2xl font-black uppercase tracking-widest hover:opacity-90 shadow-lg" style={{ fontSize: '0.85em' }}>+ Agregar</button>
                 </div>
                 <div className="flex flex-col">
                   <div className="flex-grow bg-[var(--color-secundario)] rounded-[2.5rem] border-2 border-dashed border-[var(--color-borde)] p-6 min-h-[300px]">
-                    {carritoCompras.length === 0 ? <p className="text-center opacity-30 mt-20 uppercase text-[10px] font-bold">Lista vacía</p> : 
+                    {carritoCompras.length === 0 ? <p className="text-center opacity-30 mt-20 uppercase font-bold" style={{ fontSize: '0.8em' }}>Lista vacía</p> : 
                       carritoCompras.map(item => (
                         <div key={item.tempId} className="bg-[var(--color-fondo)] p-4 rounded-2xl shadow-sm flex justify-between items-center mb-2">
-                          <p className="text-sm font-black text-[var(--color-acento)] uppercase">{item.nombre} ({item.cantidad})</p>
+                          <p className="font-black text-[var(--color-acento)] uppercase" style={{ fontSize: '0.9em' }}>{item.nombre} ({item.cantidad})</p>
                           <button onClick={() => setCarritoCompras(carritoCompras.filter(i => i.tempId !== item.tempId))} className="text-rose-400 font-black px-2">✕</button>
                         </div>
                     ))}
                   </div>
-                  <button disabled={carritoCompras.length === 0 || cargando} onClick={procesarCompraCompleta} className="w-full bg-[var(--color-acento)] text-[var(--color-texto-acento)] p-6 rounded-[2rem] font-black uppercase text-[11px] tracking-widest mt-6 shadow-xl disabled:opacity-30">
+                  <button disabled={carritoCompras.length === 0 || cargando} onClick={procesarCompraCompleta} className="w-full bg-[var(--color-acento)] text-[var(--color-texto-acento)] p-6 rounded-[2rem] font-black uppercase tracking-widest mt-6 shadow-xl disabled:opacity-30" style={{ fontSize: '0.9em' }}>
                     {cargando ? 'Procesando...' : `Confirmar Compra (${carritoCompras.length})`}
                   </button>
                 </div>
@@ -147,9 +147,9 @@ export const PanelConfiguracion = ({ tema, setTema }) => {
             ) : (
               <div className="space-y-10 animate-in fade-in">
                 <section>
-                  <h4 className="text-[11px] font-black text-[var(--color-acento)] uppercase tracking-[0.3em] mb-4 ml-4">Historial de Compras</h4>
+                  <h4 className="font-black text-[var(--color-acento)] uppercase tracking-[0.3em] mb-4 ml-4" style={{ fontSize: '0.9em' }}>Historial de Compras</h4>
                   <div className="bg-[var(--color-secundario)] rounded-[2rem] border border-[var(--color-borde)] overflow-hidden shadow-sm">
-                    <table className="w-full text-left text-xs">
+                    <table className="w-full text-left">
                       <thead className="bg-black/20 uppercase opacity-50 font-black">
                         <tr><th className="p-4">Fecha</th><th className="p-4">Producto</th><th className="p-4 text-center">Cant.</th><th className="p-4 text-right">Costo Unit.</th></tr>
                       </thead>
@@ -166,26 +166,6 @@ export const PanelConfiguracion = ({ tema, setTema }) => {
                     </table>
                   </div>
                 </section>
-                <section>
-                  <h4 className="text-[11px] font-black text-rose-400 uppercase tracking-[0.3em] mb-4 ml-4">Historial de Uso Interno</h4>
-                  <div className="bg-[var(--color-secundario)] rounded-[2rem] border border-[var(--color-borde)] overflow-hidden shadow-sm">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-black/20 uppercase opacity-50 font-black">
-                        <tr><th className="p-4">Fecha</th><th className="p-4">Producto</th><th className="p-4">Estilista</th><th className="p-4 text-center">Cant.</th></tr>
-                      </thead>
-                      <tbody>
-                        {historialUso.map(h => (
-                          <tr key={h.id} className="border-t border-[var(--color-borde)]">
-                            <td className="p-4 opacity-40">{new Date(h.fecha_uso).toLocaleDateString()}</td>
-                            <td className="p-4 font-bold uppercase">{h.inventario?.nombre}</td>
-                            <td className="p-4 font-bold text-[var(--color-acento)]">{h.estilistas?.nombre || 'General'}</td>
-                            <td className="p-4 text-center font-black text-rose-500">-{h.cantidad}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
               </div>
             )}
           </div>
@@ -195,10 +175,10 @@ export const PanelConfiguracion = ({ tema, setTema }) => {
           <div className="max-w-md animate-in slide-in-from-right-4">
             <h3 className="text-2xl font-serif italic text-[var(--color-texto-componente)] uppercase tracking-widest mb-2">General</h3>
             <div className="bg-[var(--color-secundario)] p-8 rounded-[2.5rem] border-2 border-dashed border-[var(--color-borde)] mt-8">
-              <label className="block text-[10px] font-black opacity-50 uppercase tracking-widest mb-3 ml-2">Tipo de Cambio</label>
+              <label className="block font-black opacity-50 uppercase tracking-widest mb-3 ml-2" style={{ fontSize: '0.8em' }}>Tipo de Cambio</label>
               <div className="flex gap-4">
                 <input type="number" step="0.01" value={tipoCambio} onChange={(e) => setTipoCambio(e.target.value)} className="w-full p-5 rounded-2xl border-2 border-[var(--color-borde)] bg-[var(--color-fondo)] font-black text-3xl text-[var(--color-acento)] shadow-inner outline-none focus:border-[var(--color-acento)] transition-all" />
-                <button onClick={guardarTipoCambio} className="px-8 bg-[var(--color-acento)] text-[var(--color-texto-acento)] font-black uppercase text-xs rounded-2xl hover:opacity-90 shadow-lg">Guardar</button>
+                <button onClick={guardarTipoCambio} className="px-8 bg-[var(--color-acento)] text-[var(--color-texto-acento)] font-black uppercase rounded-2xl hover:opacity-90 shadow-lg" style={{ fontSize: '0.9em' }}>Guardar</button>
               </div>
             </div>
           </div>
@@ -210,37 +190,37 @@ export const PanelConfiguracion = ({ tema, setTema }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-4">
                 <div className="bg-[var(--color-secundario)] p-4 rounded-2xl border border-[var(--color-borde)]">
-                  <label className="text-[9px] font-black opacity-50 uppercase block mb-2 tracking-widest text-[var(--color-texto-componente)]">Fondo Pantalla</label>
+                  <label className="font-black opacity-50 uppercase block mb-2 tracking-widest text-[var(--color-texto-componente)]" style={{ fontSize: '0.8em' }}>Fondo Pantalla</label>
                   <input type="color" className="w-full h-10 bg-transparent" value={tema.fondo} onChange={e => setTema({...tema, fondo: e.target.value})} />
                 </div>
                 <div className="bg-[var(--color-secundario)] p-4 rounded-2xl border border-[var(--color-borde)]">
-                  <label className="text-[9px] font-black opacity-50 uppercase block mb-2 tracking-widest text-[var(--color-texto-componente)]">Fondo Ventanas</label>
+                  <label className="font-black opacity-50 uppercase block mb-2 tracking-widest text-[var(--color-texto-componente)]" style={{ fontSize: '0.8em' }}>Fondo Ventanas</label>
                   <input type="color" className="w-full h-10 bg-transparent" value={tema.componente} onChange={e => setTema({...tema, componente: e.target.value})} />
                 </div>
                 <div className="bg-[var(--color-secundario)] p-4 rounded-2xl border border-[var(--color-borde)]">
-                  <label className="text-[9px] font-black opacity-50 uppercase block mb-2 tracking-widest text-[var(--color-texto-componente)]">Color Detalle</label>
+                  <label className="font-black opacity-50 uppercase block mb-2 tracking-widest text-[var(--color-texto-componente)]" style={{ fontSize: '0.8em' }}>Color Detalle</label>
                   <input type="color" className="w-full h-10 bg-transparent" value={tema.acento} onChange={e => setTema({...tema, acento: e.target.value})} />
                 </div>
               </div>
               <div className="space-y-4">
                 <div className="bg-[var(--color-secundario)] p-4 rounded-2xl border border-[var(--color-borde)]">
-                  <label className="text-[9px] font-black opacity-50 uppercase block mb-2 tracking-widest text-[var(--color-texto-componente)]">Letra Pantalla</label>
+                  <label className="font-black opacity-50 uppercase block mb-2 tracking-widest text-[var(--color-texto-componente)]" style={{ fontSize: '0.8em' }}>Letra Pantalla</label>
                   <input type="color" className="w-full h-10 bg-transparent" value={tema.textoGeneral} onChange={e => setTema({...tema, textoGeneral: e.target.value})} />
                 </div>
                 <div className="bg-[var(--color-secundario)] p-4 rounded-2xl border border-[var(--color-borde)]">
-                  <label className="text-[9px] font-black opacity-50 uppercase block mb-2 tracking-widest text-[var(--color-texto-componente)]">Letra Ventanas</label>
+                  <label className="font-black opacity-50 uppercase block mb-2 tracking-widest text-[var(--color-texto-componente)]" style={{ fontSize: '0.8em' }}>Letra Ventanas</label>
                   <input type="color" className="w-full h-10 bg-transparent" value={tema.textoComponente} onChange={e => setTema({...tema, textoComponente: e.target.value})} />
                 </div>
                 <div className="bg-[var(--color-secundario)] p-4 rounded-2xl border border-[var(--color-borde)]">
-                  <label className="text-[9px] font-black opacity-50 uppercase block mb-2 tracking-widest text-[var(--color-texto-componente)]">Letra Botones</label>
+                  <label className="font-black opacity-50 uppercase block mb-2 tracking-widest text-[var(--color-texto-componente)]" style={{ fontSize: '0.8em' }}>Letra Botones</label>
                   <input type="color" className="w-full h-10 bg-transparent" value={tema.textoAcento} onChange={e => setTema({...tema, textoAcento: e.target.value})} />
                 </div>
               </div>
             </div>
             <div className="mt-8 grid grid-cols-2 gap-4">
               <div className="bg-[var(--color-secundario)] p-4 rounded-2xl border border-[var(--color-borde)]">
-                <label className="text-[9px] font-black opacity-50 uppercase block mb-2 tracking-widest text-[var(--color-texto-componente)]">Tipografía</label>
-                <select className="w-full p-3 rounded-xl bg-[var(--color-fondo)] text-[var(--color-acento)] text-xs outline-none" value={tema.fuente} onChange={e => setTema({...tema, fuente: e.target.value})}>
+                <label className="font-black opacity-50 uppercase block mb-2 tracking-widest text-[var(--color-texto-componente)]" style={{ fontSize: '0.8em' }}>Tipografía</label>
+                <select className="w-full p-3 rounded-xl bg-[var(--color-fondo)] text-[var(--color-acento)] outline-none" style={{ fontSize: '0.9em' }} value={tema.fuente} onChange={e => setTema({...tema, fuente: e.target.value})}>
                   <option value="serif">Elegante (Serif)</option>
                   <option value="sans">Moderna (Sans)</option>
                   <option value="mono">Técnica (Monospace)</option>
@@ -248,11 +228,19 @@ export const PanelConfiguracion = ({ tema, setTema }) => {
                 </select>
               </div>
               <div className="bg-[var(--color-secundario)] p-4 rounded-2xl border border-[var(--color-borde)]">
-                <label className="text-[9px] font-black opacity-50 uppercase block mb-2 tracking-widest text-[var(--color-texto-componente)]">Tamaño Letra</label>
-                <input type="range" min="12" max="22" className="w-full accent-[var(--color-acento)]" value={tema.tamanioBase} onChange={e => setTema({...tema, tamanioBase: e.target.value})} />
+                <label className="font-black opacity-50 uppercase block mb-2 tracking-widest text-[var(--color-texto-componente)]" style={{ fontSize: '0.8em' }}>Tamaño Letra</label>
+                <input 
+                  type="range" 
+                  min="12" 
+                  max="26" 
+                  className="w-full accent-[var(--color-acento)] cursor-pointer" 
+                  value={tema.tamanioBase} 
+                  onChange={e => setTema({...tema, tamanioBase: e.target.value})} 
+                />
+                <p className="text-center font-bold mt-1" style={{ fontSize: '0.8em' }}>{tema.tamanioBase}px</p>
               </div>
             </div>
-            <button onClick={guardarPreferenciasTema} className="w-full py-5 bg-[var(--color-acento)] text-[var(--color-texto-acento)] font-black uppercase text-[10px] tracking-widest rounded-2xl shadow-xl mt-10">Guardar Todo el Estilo</button>
+            <button onClick={guardarPreferenciasTema} className="w-full py-5 bg-[var(--color-acento)] text-[var(--color-texto-acento)] font-black uppercase tracking-widest rounded-2xl shadow-xl mt-10" style={{ fontSize: '0.9em' }}>Guardar Todo el Estilo</button>
           </div>
         )}
 

@@ -140,12 +140,20 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const cargarDatosHoy = async () => {
+  const cargarDatosHoy = async (fechaSeleccionada) => {
     if (!session) return;
     const hoy = new Date();
     const offset = hoy.getTimezoneOffset() * 60000;
-    const localHoy = new Date(hoy - offset).toISOString().split('T')[0];
-    const { data } = await supabase.from('citas').select(`*, clientes(nombre), inventario(nombre, precio_venta), estilistas(nombre, comision_porcentaje)`).gte('fecha_inicio', `${localHoy}T00:00:00Z`).lte('fecha_inicio', `${localHoy}T23:59:59Z`).order('fecha_inicio', { ascending: true });
+    
+    // Si viene fechaSeleccionada la usa, si no, usa hoy local.
+    const localHoy = fechaSeleccionada || new Date(hoy - offset).toISOString().split('T')[0];
+    
+    const { data } = await supabase.from('citas')
+      .select(`*, clientes(nombre), inventario(nombre, precio_venta), estilistas(nombre, comision_porcentaje)`)
+      .gte('fecha_inicio', `${localHoy}T00:00:00Z`)
+      .lte('fecha_inicio', `${localHoy}T23:59:59Z`)
+      .order('fecha_inicio', { ascending: true });
+    
     setCitasDelDia(data || []);
   };
 

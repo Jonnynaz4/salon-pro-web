@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './api/supabase';
 import { Timeline } from './features/agenda/Timeline';
 import { PuntoVenta } from './features/ventas/PuntoVenta';
 import { Login } from './features/auth/Login';
 import { PanelConfiguracion } from './features/configuracion/PanelConfiguracion'; 
 import { Reportes } from './features/reportes/Reportes';
+import { SearchableSelect } from './components/ui/SearchableSelect';
 
 // --- COMPONENTE DE VALES (PRÉSTAMOS Y ABONOS) ---
 const SeccionVales = () => {
@@ -14,13 +15,19 @@ const SeccionVales = () => {
   const [modalAbono, setModalAbono] = useState(false);
   const [valeSeleccionado, setValeSeleccionado] = useState(null);
   const [montoAbono, setMontoAbono] = useState('');
+  const [modalPin, setModalPin] = useState(false);
+  const [pinIngresado, setPinIngresado] = useState('');
+  const [valeAInactivar, setValeAInactivar] = useState(null);
 
   useEffect(() => { fetchDatos(); }, []);
 
   const fetchDatos = async () => {
     const { data: est } = await supabase.from('estilistas').select('*').eq('activo', true).order('nombre');
     setEstilistas(est || []);
-    const { data: pres } = await supabase.from('prestamos').select('*, estilistas(nombre)').order('fecha_vencimiento', { ascending: true });
+    const { data: pres } = await supabase.from('prestamos')
+      .select('*, estilistas(nombre)')
+      .neq('estatus', 'inactivo')
+      .order('fecha_vencimiento', { ascending: true });
     setPrestamos(pres || []);
   };
 
@@ -48,6 +55,44 @@ const SeccionVales = () => {
     if (!error) { setModalAbono(false); setMontoAbono(''); setValeSeleccionado(null); fetchDatos(); }
   };
 
+  const handleInactivar = async (e) => {
+    e.preventDefault();
+    if (!valeAInactivar) return;
+
+    // Verificar PIN
+    const { data: config } = await supabase.from('configuracion')
+      .select('valor')
+      .eq('clave', 'pin_seguridad')
+      .order('id', { ascending: false }) // Siempre tomar el más reciente
+      .limit(1)
+      .maybeSingle();
+    
+    if (!config) {
+      alert("⚠️ PIN de seguridad no configurado. Ve a Ajustes > General para establecer uno.");
+      setPinIngresado('');
+      return;
+    }
+
+    // Usamos String().trim() para evitar problemas si vienen números puros
+    if (String(config.valor).trim() !== pinIngresado.trim()) {
+      alert("❌ PIN incorrecto. Acción denegada.");
+      setPinIngresado('');
+      return;
+    }
+
+    const { error } = await supabase.from('prestamos')
+      .update({ estatus: 'inactivo' })
+      .eq('id', valeAInactivar.id);
+
+    if (!error) {
+       alert("🗑️ Vale inactivado correctamente.");
+       setModalPin(false);
+       setPinIngresado('');
+       setValeAInactivar(null);
+       fetchDatos();
+    }
+  };
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <header className="mb-8">
@@ -58,11 +103,14 @@ const SeccionVales = () => {
       <div className="bg-[var(--color-componente)] p-6 md:p-8 rounded-[2rem] md:rounded-[3rem] shadow-xl border border-[var(--color-borde)]">
         <h3 className="font-bold text-[var(--color-acento)] mb-4 uppercase tracking-widest" style={{ fontSize: '0.8em' }}>Nuevo Vale</h3>
         <form onSubmit={manejarGuardar} className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <select className="p-3 rounded-xl bg-[var(--color-secundario)] border border-[var(--color-borde)] text-[var(--color-texto-componente)] outline-none" value={nuevoPrestamo.id_estilista} onChange={e => setNuevoPrestamo({...nuevoPrestamo, id_estilista: e.target.value})} required>
-            <option value="">Estilista...</option>
-            {estilistas.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
-          </select>
-          <input type="number" placeholder="Monto $" className="p-3 rounded-xl bg-[var(--color-secundario)] border border-[var(--color-borde)] text-[var(--color-texto-componente)]" value={nuevoPrestamo.monto_total} onChange={e => setNuevoPrestamo({...nuevoPrestamo, monto_total: e.target.value})} required />
+          <SearchableSelect 
+            options={estilistas.map(e => ({ value: e.id, label: e.nombre }))}
+            value={nuevoPrestamo.id_estilista}
+            onChange={val => setNuevoPrestamo({...nuevoPrestamo, id_estilista: val})}
+            placeholder="Estilista..."
+            className="md:col-span-1"
+          />
+          <input type="number" placeholder="Monto $" className="p-3 rounded-xl bg-[var(--color-secundario)] border border-[var(--color-borde)] text-[var(--color-texto-componente)]" value={nuevoPrestamo.monto_total} onFocus={(e) => e.target.value === '0' && setNuevoPrestamo({...nuevoPrestamo, monto_total: ''})} onChange={e => setNuevoPrestamo({...nuevoPrestamo, monto_total: e.target.value})} required />
           <input type="date" className="p-3 rounded-xl bg-[var(--color-secundario)] border border-[var(--color-borde)] text-[var(--color-texto-componente)] opacity-50" value={nuevoPrestamo.fecha_vencimiento} onChange={e => setNuevoPrestamo({...nuevoPrestamo, fecha_vencimiento: e.target.value})} required />
           <input type="text" placeholder="Concepto" className="p-3 rounded-xl bg-[var(--color-secundario)] border border-[var(--color-borde)] text-[var(--color-texto-componente)]" value={nuevoPrestamo.notas} onChange={e => setNuevoPrestamo({...nuevoPrestamo, notas: e.target.value})} />
           <button className="bg-[var(--color-acento)] text-[var(--color-texto-acento)] rounded-xl font-black uppercase tracking-widest py-3 md:py-0">Registrar</button>
@@ -83,9 +131,12 @@ const SeccionVales = () => {
                   <td className="p-5 opacity-60">${p.monto_total}</td>
                   <td className="p-5 text-[var(--color-acento)] font-black">${p.saldo_pendiente}</td>
                   <td className="p-5 text-center">
-                    {p.saldo_pendiente > 0 && (
-                      <button onClick={() => { setValeSeleccionado(p); setModalAbono(true); }} className="border border-[var(--color-acento)] text-[var(--color-acento)] px-4 py-1 rounded-lg font-bold uppercase hover:bg-[var(--color-acento)] hover:text-[var(--color-texto-acento)] transition-all" style={{ fontSize: '0.7em' }}>Abonar</button>
-                    )}
+                    <div className="flex gap-2 justify-center">
+                      {p.saldo_pendiente > 0 && (
+                        <button onClick={() => { setValeSeleccionado(p); setModalAbono(true); }} className="border border-[var(--color-acento)] text-[var(--color-acento)] px-4 py-1 rounded-lg font-bold uppercase hover:bg-[var(--color-acento)] hover:text-[var(--color-texto-acento)] transition-all" style={{ fontSize: '0.7em' }}>Abonar</button>
+                      )}
+                      <button onClick={() => { setValeAInactivar(p); setModalPin(true); }} className="border border-rose-500/30 text-rose-500 px-3 py-1 rounded-lg font-bold uppercase hover:bg-rose-500 hover:text-white transition-all" style={{ fontSize: '0.7em' }}>Inactivar</button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -99,11 +150,48 @@ const SeccionVales = () => {
           <div className="bg-[var(--color-componente)] p-8 rounded-[2rem] shadow-2xl border border-[var(--color-borde)] max-w-sm w-full">
             <h3 className="font-serif italic text-2xl text-[var(--color-acento)] mb-6 text-center">Registrar Abono</h3>
             <form onSubmit={manejarAbono} className="space-y-6">
-              <input type="number" step="0.01" required autoFocus className="w-full p-4 rounded-2xl bg-[var(--color-secundario)] border border-[var(--color-borde)] text-[var(--color-acento)] text-center text-2xl font-serif outline-none" value={montoAbono} onChange={(e) => setMontoAbono(e.target.value)} />
+              <input type="number" step="0.01" required autoFocus className="w-full p-4 rounded-2xl bg-[var(--color-secundario)] border border-[var(--color-borde)] text-[var(--color-acento)] text-center text-2xl font-serif outline-none" value={montoAbono} onFocus={(e) => e.target.value === '0' && setMontoAbono('')} onChange={(e) => setMontoAbono(e.target.value)} />
               <div className="flex gap-3">
                 <button type="button" onClick={() => setModalAbono(false)} className="flex-1 py-3 text-slate-500 font-bold uppercase" style={{ fontSize: '0.7em' }}>Cerrar</button>
                 <button type="submit" className="flex-1 py-3 bg-[var(--color-acento)] text-[var(--color-texto-acento)] rounded-xl font-black uppercase" style={{ fontSize: '0.7em' }}>Confirmar</button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {modalPin && (
+        <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
+          <div className="bg-[var(--color-componente)] p-8 rounded-[3rem] shadow-2xl border border-rose-500/20 max-w-sm w-full text-center">
+            <div className="w-16 h-16 bg-rose-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+               <span className="text-2xl">🔒</span>
+            </div>
+            <h3 className="font-serif italic text-2xl text-white mb-2">Seguridad Requerida</h3>
+            <p className="text-[10px] uppercase font-black opacity-40 mb-8 tracking-[0.2em]">Ingrese PIN de 5 dígitos para inactivar</p>
+            
+            <form onSubmit={handleInactivar} className="space-y-8">
+               <div className="flex justify-center">
+                  <input 
+                    type="password" 
+                    maxLength="5" 
+                    autoFocus 
+                    placeholder="•••••"
+                    className="w-48 p-4 bg-white/5 rounded-2xl border-2 border-[var(--color-acento)] text-center text-3xl font-black text-[var(--color-acento)] outline-none tracking-[0.5em] placeholder:opacity-20 transition-all focus:bg-white/10" 
+                    value={pinIngresado} 
+                    onChange={(e) => setPinIngresado(e.target.value.replace(/\D/g, '').slice(0, 5))} 
+                  />
+               </div>
+               
+               <div className="flex gap-4">
+                  <button type="button" onClick={() => { setModalPin(false); setPinIngresado(''); }} className="flex-1 py-4 text-slate-500 font-bold uppercase text-[10px] tracking-widest">Cancelar</button>
+                  <button 
+                    type="submit" 
+                    disabled={pinIngresado.length !== 5}
+                    className="flex-1 py-4 bg-rose-500 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-rose-500/20 disabled:opacity-20"
+                  >
+                    Confirmar
+                  </button>
+               </div>
             </form>
           </div>
         </div>
@@ -116,6 +204,10 @@ function App() {
   const [session, setSession] = useState(null);
   const [tab, setTab] = useState('agenda');
   const [citasDelDia, setCitasDelDia] = useState([]);
+  const [fechaAgenda, setFechaAgenda] = useState(new Date().toISOString().split('T')[0]);
+  const [estilistas, setEstilistas] = useState([]);
+  const [clientes, setClientes] = useState([]);
+  const [servicios, setServicios] = useState([]);
   const [menuAbierto, setMenuAbierto] = useState(false);
 
   const [tema, setTema] = useState(() => {
@@ -140,24 +232,58 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const cargarDatosHoy = async (fechaSeleccionada) => {
+  const cargarDatosMaestros = async () => {
+    if (!session) return;
+    const { data: est } = await supabase.from('estilistas').select('*').eq('activo', true).order('nombre');
+    const { data: cli } = await supabase.from('clientes').select('*').order('nombre');
+    const { data: serv } = await supabase.from('inventario').select('*').eq('tipo', 'servicio').order('nombre');
+    setEstilistas(est || []);
+    setClientes(cli || []);
+    setServicios(serv || []);
+  };
+
+  const cargarDatosHoy = useCallback(async (fechaSeleccionada) => {
     if (!session) return;
     const hoy = new Date();
     const offset = hoy.getTimezoneOffset() * 60000;
     
-    // Si viene fechaSeleccionada la usa, si no, usa hoy local.
-    const localHoy = fechaSeleccionada || new Date(hoy - offset).toISOString().split('T')[0];
+    // Prioridad: 1. fechaSeleccionada (el argumento) | 2. fechaAgenda (el estado global) | 3. hoy (fallback)
+    const localHoy = fechaSeleccionada || fechaAgenda || new Date(hoy - offset).toISOString().split('T')[0];
     
-    const { data } = await supabase.from('citas')
+    console.log("📅 [App] Cargando citas para:", localHoy);
+    
+    const { data, error } = await supabase.from('citas')
       .select(`*, clientes(nombre), inventario(nombre, precio_venta), estilistas(nombre, comision_porcentaje)`)
       .gte('fecha_inicio', `${localHoy}T00:00:00Z`)
       .lte('fecha_inicio', `${localHoy}T23:59:59Z`)
       .order('fecha_inicio', { ascending: true });
     
-    setCitasDelDia(data || []);
-  };
+    if (error) {
+      console.error("❌ [App] Error cargando citas:", error);
+    } else {
+      console.log("✅ [App] Citas recibidas:", data?.length || 0);
+      setCitasDelDia(data || []);
+    }
+  }, [session, fechaAgenda]); // Dependemos de fechaAgenda para que siempre esté actualizado
 
-  useEffect(() => { if (session) cargarDatosHoy(); }, [session, tab]);
+  useEffect(() => { 
+    if (session) {
+      cargarDatosMaestros();
+      cargarDatosHoy(fechaAgenda); 
+    }
+  }, [session, tab, fechaAgenda]);
+
+  // Recargar al recuperar el foco de la ventana (Solución definitiva al error de pérdida de citas)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (session && tab === 'agenda') {
+        console.log("🔄 [App] Foco recuperado. Refrescando fecha:", fechaAgenda);
+        cargarDatosHoy(fechaAgenda);
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [session, tab, fechaAgenda, cargarDatosHoy]);
 
   const fuentesMap = {
     serif: 'ui-serif, Georgia, serif',
@@ -192,10 +318,10 @@ function App() {
             className="h-10 md:h-16 w-auto object-contain drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]" 
           />
           <div className="flex flex-col justify-center">
-            <h1 className="text-xs md:text-base font-light tracking-[0.2em] text-white uppercase leading-none">
-              Jonny <span className="italic font-serif text-[var(--color-acento)]">Delgadillo</span>
+            <h1 className="text-lg md:text-2xl font-serif italic text-white leading-none">
+              Masaryk
             </h1>
-            <span className="uppercase tracking-[0.4em] opacity-50 font-black mt-1" style={{ fontSize: '0.5em' }}>
+            <span className="uppercase tracking-[0.5em] text-[var(--color-acento)] font-black mt-1" style={{ fontSize: '0.55em' }}>
               Hair Salon
             </span>
           </div>
@@ -203,6 +329,7 @@ function App() {
 
         {/* Botón Menú Móvil */}
         <button 
+          type="button"
           onClick={() => setMenuAbierto(!menuAbierto)}
           className="md:hidden p-2 text-[var(--color-acento)] focus:outline-none"
         >
@@ -220,12 +347,12 @@ function App() {
         {/* Nav Desktop */}
         <nav className="hidden md:flex gap-8 items-center text-[var(--color-texto-componente)]">
           {['agenda', 'ventas', 'vales', 'reportes', 'config'].map(t => (
-            <button key={t} onClick={() => setTab(t)} className={`uppercase font-bold relative pb-2 transition-all ${tab === t ? 'text-[var(--color-acento)]' : 'opacity-60 hover:opacity-100 hover:text-[var(--color-acento)]'}`} style={{ fontSize: '0.8em' }}>
+            <button key={t} type="button" onClick={() => setTab(t)} className={`uppercase font-bold relative pb-2 transition-all ${tab === t ? 'text-[var(--color-acento)]' : 'opacity-60 hover:opacity-100 hover:text-[var(--color-acento)]'}`} style={{ fontSize: '0.8em' }}>
               {t === 'config' ? 'Ajustes' : t === 'ventas' ? 'Caja' : t} {tab === t && <div className="absolute bottom-0 left-0 w-full h-[1px] bg-[var(--color-acento)]"></div>}
             </button>
           ))}
           <div className="h-6 w-px bg-[var(--color-borde)] mx-2"></div>
-          <button onClick={() => supabase.auth.signOut()} className="px-5 py-2 border border-[var(--color-borde)] rounded-full font-black uppercase opacity-60 hover:opacity-100 hover:text-[var(--color-acento)] hover:border-[var(--color-acento)]" style={{ fontSize: '0.7em' }}>Salir</button>
+          <button type="button" onClick={() => supabase.auth.signOut()} className="px-5 py-2 border border-[var(--color-borde)] rounded-full font-black uppercase opacity-60 hover:opacity-100 hover:text-[var(--color-acento)] hover:border-[var(--color-acento)]" style={{ fontSize: '0.7em' }}>Salir</button>
         </nav>
 
         {/* Menú Móvil Overlay */}
@@ -235,6 +362,7 @@ function App() {
               {['agenda', 'ventas', 'vales', 'reportes', 'config'].map(t => (
                 <button 
                   key={t} 
+                  type="button"
                   onClick={() => { setTab(t); setMenuAbierto(false); }} 
                   className={`text-left py-5 border-b border-[var(--color-borde)] uppercase font-black tracking-[0.2em] ${tab === t ? 'text-[var(--color-acento)]' : 'opacity-60'}`}
                   style={{ fontSize: '1.1em' }}
@@ -243,6 +371,7 @@ function App() {
                 </button>
               ))}
               <button 
+                type="button"
                 onClick={() => supabase.auth.signOut()} 
                 className="mt-10 py-5 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-2xl font-black uppercase tracking-widest"
                 style={{ fontSize: '0.9em' }}
@@ -255,8 +384,27 @@ function App() {
       </header>
 
       <main className="p-4 md:p-8 w-full max-w-[1700px] mx-auto flex-grow animate-in fade-in duration-500">
-        {tab === 'agenda' && <Timeline citas={citasDelDia} recargar={cargarDatosHoy} />}
-        {tab === 'ventas' && <PuntoVenta citasPendientes={citasDelDia.filter(c => c.estatus?.toLowerCase() === 'pendiente')} alTerminar={() => { cargarDatosHoy(); setTab('agenda'); }} />}
+        {tab === 'agenda' && (
+          <Timeline 
+            citas={citasDelDia} 
+            recargar={cargarDatosHoy} 
+            fechaAgenda={fechaAgenda}
+            setFechaAgenda={setFechaAgenda}
+            estilistasProp={estilistas}
+            clientesProp={clientes}
+            serviciosProp={servicios}
+            recargarMaestros={cargarDatosMaestros}
+          />
+        )}
+        {tab === 'ventas' && (
+          <PuntoVenta 
+            citasPendientes={citasDelDia.filter(c => c.estatus?.toLowerCase() === 'pendiente')} 
+            alTerminar={() => { cargarDatosHoy(); setTab('agenda'); }} 
+            fechaAgenda={fechaAgenda}
+            setFechaAgenda={setFechaAgenda}
+            recargar={cargarDatosHoy}
+          />
+        )}
         {tab === 'vales' && <SeccionVales />}
         {tab === 'reportes' && <Reportes />}
         {tab === 'config' && <PanelConfiguracion tema={tema} setTema={setTema} />}

@@ -27,6 +27,7 @@ export const PrestamosEstilistas = () => {
     const { data: pres } = await supabase
       .from('prestamos')
       .select('*, estilistas(nombre)')
+      .neq('estatus', 'inactivo')
       .order('fecha_vencimiento', { ascending: true });
     setPrestamos(pres || []);
   };

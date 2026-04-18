@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../api/supabase';
+import { SearchableSelect } from '../../components/ui/SearchableSelect';
 import { EstilistaAdmin } from '../estilistas/EstilistaAdmin';
 import { ClienteForm } from '../clientes/ClienteForm';
 import { InventarioForm } from '../inventario/InventarioForm';
@@ -8,6 +9,7 @@ export const PanelConfiguracion = ({ tema, setTema }) => {
   const [seccion, setSeccion] = useState('general');
   const [subSeccion, setSubSeccion] = useState('registro'); 
   const [tipoCambio, setTipoCambio] = useState(18.50);
+  const [pinSeguridad, setPinSeguridad] = useState('');
   
   const [productos, setProductos] = useState([]);
   const [carritoCompras, setCarritoCompras] = useState([]);
@@ -19,8 +21,21 @@ export const PanelConfiguracion = ({ tema, setTema }) => {
 
   useEffect(() => {
     const fetchConfig = async () => {
-      const { data } = await supabase.from('configuracion').select('*').eq('clave', 'tipo_cambio').single();
-      if (data) setTipoCambio(data.valor);
+      const { data: tc } = await supabase.from('configuracion')
+        .select('*')
+        .eq('clave', 'tipo_cambio')
+        .order('id', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (tc) setTipoCambio(tc.valor);
+
+      const { data: pin } = await supabase.from('configuracion')
+        .select('*')
+        .eq('clave', 'pin_seguridad')
+        .order('id', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (pin) setPinSeguridad(String(pin.valor).trim());
     };
     const fetchProductos = async () => {
       const { data } = await supabase.from('inventario').select('*').eq('tipo', 'producto').order('nombre');
@@ -61,8 +76,29 @@ export const PanelConfiguracion = ({ tema, setTema }) => {
   };
 
   const guardarTipoCambio = async () => {
-    await supabase.from('configuracion').update({ valor: tipoCambio }).eq('clave', 'tipo_cambio');
-    alert("✅ Tipo de cambio actualizado");
+    const { error } = await supabase
+      .from('configuracion')
+      .upsert({ clave: 'tipo_cambio', valor: tipoCambio }, { onConflict: 'clave' });
+    
+    if (error) alert("❌ Error al guardar: " + error.message);
+    else alert("✅ Tipo de cambio actualizado");
+  };
+
+  const guardarPin = async () => {
+    if (pinSeguridad.length !== 5) {
+      alert("⚠️ El PIN debe ser de exactamente 5 dígitos");
+      return;
+    }
+
+    const { error } = await supabase
+      .from('configuracion')
+      .upsert({ clave: 'pin_seguridad', valor: pinSeguridad }, { onConflict: 'clave' });
+    
+    if (error) {
+      alert("❌ Error al configurar PIN: " + error.message);
+    } else {
+      alert("🔐 PIN de seguridad actualizado correctamente.");
+    }
   };
 
   const guardarPreferenciasTema = () => {
@@ -104,10 +140,12 @@ export const PanelConfiguracion = ({ tema, setTema }) => {
             {subSeccion === 'registro' ? (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-10">
                 <div className="bg-[var(--color-secundario)] p-6 md:p-8 rounded-[2rem] md:rounded-[2.5rem] border border-[var(--color-borde)] space-y-4 h-fit">
-                   <select className="w-full p-4 rounded-xl bg-[var(--color-fondo)] border border-[var(--color-borde)] text-[var(--color-texto-componente)] font-bold outline-none" value={itemActual.id_producto} onChange={e => setItemActual({...itemActual, id_producto: e.target.value})} style={{ fontSize: '0.9em' }}>
-                     <option value="">Seleccionar Producto...</option>
-                     {productos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                   </select>
+                   <SearchableSelect 
+                     options={productos.map(p => ({ value: p.id, label: p.nombre }))}
+                     value={itemActual.id_producto}
+                     onChange={val => setItemActual({...itemActual, id_producto: val})}
+                     placeholder="Seleccionar Producto..."
+                   />
                    <div className="grid grid-cols-2 gap-4">
                      <input type="number" className="p-4 rounded-xl bg-[var(--color-fondo)] border border-[var(--color-borde)] text-[var(--color-texto-componente)] font-bold" value={itemActual.cantidad} onChange={e => setItemActual({...itemActual, cantidad: e.target.value})} placeholder="Cant." style={{ fontSize: '0.9em' }} />
                      <input type="number" className="p-4 rounded-xl bg-[var(--color-fondo)] border border-[var(--color-borde)] text-[var(--color-texto-componente)] font-bold" value={itemActual.costo_unitario} onChange={e => setItemActual({...itemActual, costo_unitario: e.target.value})} placeholder="Costo $" style={{ fontSize: '0.9em' }} />
@@ -156,9 +194,22 @@ export const PanelConfiguracion = ({ tema, setTema }) => {
             <h3 className="text-2xl font-serif italic text-[var(--color-texto-componente)] uppercase tracking-widest mb-2">General</h3>
             <div className="bg-[var(--color-secundario)] p-6 md:p-8 rounded-[2rem] border-2 border-dashed border-[var(--color-borde)] mt-8">
               <label className="block font-black opacity-50 uppercase tracking-widest mb-3 ml-2" style={{fontSize: '0.7em'}}>Tipo de Cambio</label>
-              <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex flex-col sm:flex-row gap-4 mb-8">
                 <input type="number" step="0.01" value={tipoCambio} onChange={(e) => setTipoCambio(e.target.value)} className="w-full p-4 md:p-5 rounded-2xl border-2 border-[var(--color-borde)] bg-[var(--color-fondo)] font-black text-2xl md:text-3xl text-[var(--color-acento)] outline-none" />
                 <button onClick={guardarTipoCambio} className="px-8 py-4 bg-[var(--color-acento)] text-[var(--color-texto-acento)] font-black uppercase rounded-2xl shadow-lg" style={{fontSize: '0.8em'}}>Guardar</button>
+              </div>
+
+              <label className="block font-black opacity-50 uppercase tracking-widest mb-3 ml-2" style={{fontSize: '0.7em'}}>PIN de Seguridad (5 dígitos)</label>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <input 
+                  type="password" 
+                  maxLength="5" 
+                  placeholder="•••••"
+                  value={pinSeguridad} 
+                  onChange={(e) => setPinSeguridad(e.target.value.replace(/\D/g, '').slice(0, 5))} 
+                  className="w-full p-4 md:p-5 rounded-2xl border-2 border-[var(--color-borde)] bg-[var(--color-fondo)] font-black text-2xl md:text-3xl text-[var(--color-acento)] outline-none tracking-[0.5em]" 
+                />
+                <button onClick={guardarPin} className="px-8 py-4 bg-[var(--color-acento)] text-[var(--color-texto-acento)] font-black uppercase rounded-2xl shadow-lg" style={{fontSize: '0.8em'}}>Configurar PIN</button>
               </div>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../api/supabase';
+import { SearchableSelect } from '../../components/ui/SearchableSelect';
 
 export const InventarioForm = () => {
   const [items, setItems] = useState([]);
@@ -56,9 +57,9 @@ export const InventarioForm = () => {
       return (
         <tr className="bg-[var(--color-secundario)]">
           <td className="p-2 md:p-3"><input className="w-full p-2 rounded-lg bg-[var(--color-fondo)] border border-[var(--color-borde)] text-[var(--color-texto-componente)] font-bold outline-none" value={editFormData.nombre} onChange={e => setEditFormData({...editFormData, nombre: e.target.value})} style={{ fontSize: '0.85em' }} /></td>
-          {esProducto && <td className="p-2 md:p-3"><input type="number" className="w-16 p-2 rounded-lg bg-[var(--color-fondo)] border border-[var(--color-borde)] text-center font-bold" value={editFormData.stock_minimo} onChange={e => setEditFormData({...editFormData, stock_minimo: e.target.value})} style={{ fontSize: '0.85em' }} /></td>}
+          {esProducto && <td className="p-2 md:p-3"><input type="number" className="w-16 p-2 rounded-lg bg-[var(--color-fondo)] border border-[var(--color-borde)] text-center font-bold" value={editFormData.stock_minimo} onFocus={(e) => e.target.value === '0' && setEditFormData({...editFormData, stock_minimo: ''})} onChange={e => setEditFormData({...editFormData, stock_minimo: e.target.value})} style={{ fontSize: '0.85em' }} /></td>}
           <td className="p-2 md:p-3"><select className="w-full p-2 rounded-lg bg-[var(--color-fondo)] border border-[var(--color-borde)] font-bold outline-none" value={editFormData.tipo} onChange={e => setEditFormData({...editFormData, tipo: e.target.value})} style={{ fontSize: '0.85em' }}><option value="servicio">Serv.</option><option value="producto">Prod.</option></select></td>
-          <td className="p-2 md:p-3"><input type="number" className="w-full p-2 rounded-lg bg-[var(--color-fondo)] border border-[var(--color-borde)] font-bold text-right" value={editFormData.precio_venta} onChange={e => setEditFormData({...editFormData, precio_venta: e.target.value})} style={{ fontSize: '0.85em' }} /></td>
+          <td className="p-2 md:p-3"><input type="number" className="w-full p-2 rounded-lg bg-[var(--color-fondo)] border border-[var(--color-borde)] font-bold text-right" value={editFormData.precio_venta} onFocus={(e) => e.target.value === '0' && setEditFormData({...editFormData, precio_venta: ''})} onChange={e => setEditFormData({...editFormData, precio_venta: e.target.value})} style={{ fontSize: '0.85em' }} /></td>
           <td className="p-2 md:p-3 text-center flex justify-center gap-1 md:gap-2">
             <button onClick={guardarEdicion} className="bg-[var(--color-acento)] text-[var(--color-texto-acento)] p-2 rounded-lg font-black uppercase" style={{ fontSize: '0.65em' }}>✔</button>
             <button onClick={cancelarEdicion} className="bg-slate-700 text-white p-2 rounded-lg font-black uppercase" style={{ fontSize: '0.65em' }}>✖</button>
@@ -90,8 +91,8 @@ export const InventarioForm = () => {
             <option value="servicio">✂️ Servicio</option><option value="producto">🧴 Producto</option>
           </select>
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1"><label className="font-bold opacity-50 uppercase ml-2 text-[var(--color-texto-componente)]" style={{ fontSize: '0.6em' }}>Costo</label><input type="number" className="w-full p-4 rounded-2xl bg-[var(--color-secundario)] border border-[var(--color-borde)] font-bold outline-none" value={formData.precio_compra} onChange={e => setFormData({...formData, precio_compra: e.target.value})} placeholder="0.00" style={{ fontSize: '0.8em' }} /></div>
-            <div className="space-y-1"><label className="font-bold opacity-50 uppercase ml-2 text-[var(--color-texto-componente)]" style={{ fontSize: '0.6em' }}>Venta</label><input type="number" className="w-full p-4 rounded-2xl bg-[var(--color-secundario)] border border-[var(--color-borde)] font-bold outline-none" value={formData.precio_venta} onChange={e => setFormData({...formData, precio_venta: e.target.value})} placeholder="0.00" style={{ fontSize: '0.8em' }} /></div>
+            <div className="space-y-1"><label className="font-bold opacity-50 uppercase ml-2 text-[var(--color-texto-componente)]" style={{ fontSize: '0.6em' }}>Costo</label><input type="number" className="w-full p-4 rounded-2xl bg-[var(--color-secundario)] border border-[var(--color-borde)] font-bold outline-none" value={formData.precio_compra} onFocus={(e) => e.target.value === '0' && setFormData({...formData, precio_compra: ''})} onChange={e => setFormData({...formData, precio_compra: e.target.value})} placeholder="0.00" style={{ fontSize: '0.8em' }} /></div>
+            <div className="space-y-1"><label className="font-bold opacity-50 uppercase ml-2 text-[var(--color-texto-componente)]" style={{ fontSize: '0.6em' }}>Venta</label><input type="number" className="w-full p-4 rounded-2xl bg-[var(--color-secundario)] border border-[var(--color-borde)] font-bold outline-none" value={formData.precio_venta} onFocus={(e) => e.target.value === '0' && setFormData({...formData, precio_venta: ''})} onChange={e => setFormData({...formData, precio_venta: e.target.value})} placeholder="0.00" style={{ fontSize: '0.8em' }} /></div>
           </div>
           <button className="w-full py-4 bg-[var(--color-acento)] text-[var(--color-texto-acento)] font-black rounded-2xl shadow-lg uppercase tracking-widest" style={{ fontSize: '0.8em' }}>Agregar</button>
         </form>
@@ -119,13 +120,24 @@ export const InventarioForm = () => {
       </div>
 
       {modalUso && (
-        <div className="fixed inset-0 z-[500] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-[500] flex items-start justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto pt-20 pb-20">
           <div className="bg-[var(--color-componente)] w-full max-w-md rounded-[2.5rem] md:rounded-[3rem] shadow-2xl border border-[var(--color-acento)]/20 p-8 md:p-10 animate-in zoom-in duration-300">
             <h3 className="font-serif italic text-2xl md:text-3xl text-[var(--color-acento)] mb-2 text-center">Uso Interno</h3>
             <p className="font-bold opacity-50 uppercase tracking-widest mb-8 text-center truncate" style={{ fontSize: '0.75em' }}>{itemSeleccionado?.nombre}</p>
             <div className="space-y-6">
-              <div className="space-y-2"><label className="font-black opacity-50 uppercase ml-2" style={{ fontSize: '0.65em' }}>Asignar a</label><select className="w-full p-4 rounded-2xl bg-[var(--color-secundario)] border border-[var(--color-borde)] text-[var(--color-texto-componente)] font-bold outline-none" value={usoData.id_estilista} onChange={e => setUsoData({...usoData, id_estilista: e.target.value})} style={{ fontSize: '0.9em' }}><option value="">Gasto General</option>{estilistas.map(est => <option key={est.id} value={est.id}>{est.nombre}</option>)}</select></div>
-              <div className="space-y-2"><label className="font-black opacity-50 uppercase ml-2" style={{ fontSize: '0.65em' }}>Cantidad</label><input type="number" min="1" className="w-full p-4 rounded-2xl bg-[var(--color-secundario)] border border-[var(--color-borde)] text-[var(--color-acento)] font-black text-2xl text-center outline-none" value={usoData.cantidad} onChange={e => setUsoData({...usoData, cantidad: parseInt(e.target.value)})} /></div>
+              <div className="space-y-2">
+                <label className="font-black opacity-50 uppercase ml-2" style={{ fontSize: '0.65em' }}>Asignar a</label>
+                <SearchableSelect 
+                  options={[
+                    { value: '', label: 'Gasto General' },
+                    ...estilistas.map(est => ({ value: est.id, label: est.nombre }))
+                  ]}
+                  value={usoData.id_estilista}
+                  onChange={val => setUsoData({...usoData, id_estilista: val})}
+                  placeholder="¿A quién se le asigna?"
+                />
+              </div>
+              <div className="space-y-2"><label className="font-black opacity-50 uppercase ml-2" style={{ fontSize: '0.65em' }}>Cantidad</label><input type="number" min="1" className="w-full p-4 rounded-2xl bg-[var(--color-secundario)] border border-[var(--color-borde)] text-[var(--color-acento)] font-black text-2xl text-center outline-none" value={usoData.cantidad} onFocus={(e) => e.target.value === '0' && setUsoData({...usoData, cantidad: ''})} onChange={e => setUsoData({...usoData, cantidad: e.target.value})} /></div>
               <div className="flex gap-4 pt-4"><button onClick={() => setModalUso(false)} className="flex-1 py-4 font-black uppercase opacity-50 hover:opacity-100" style={{ fontSize: '0.75em' }}>Cerrar</button><button onClick={confirmarUsoInterno} className="flex-1 py-4 bg-[var(--color-acento)] text-[var(--color-texto-acento)] font-black uppercase rounded-2xl shadow-lg" style={{ fontSize: '0.75em' }}>Confirmar</button></div>
             </div>
           </div>

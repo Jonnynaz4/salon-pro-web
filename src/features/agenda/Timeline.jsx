@@ -50,13 +50,13 @@ export const Timeline = ({ citas, recargar, fechaAgenda, setFechaAgenda, estilis
   const [ahora, setAhora] = useState(new Date());
   const [datosCargados, setDatosCargados] = useState(false);
   const containerRef = useRef(null);
-  
+
   // --- ESTADOS GESTIÓN ---
   const [mostrarGestor, setMostrarGestor] = useState(false);
   const [todasLasCitas, setTodasLasCitas] = useState([]);
   const [cargandoHistorial, setCargandoHistorial] = useState(false);
   const [citaEditando, setCitaEditando] = useState(null);
-  const [modalAlta, setModalAlta] = useState(null); 
+  const [modalAlta, setModalAlta] = useState(null);
   const [mostrarSidebarMobile, setMostrarSidebarMobile] = useState(false);
   const [estilistaSeleccionado, setEstilistaSeleccionado] = useState(null);
   const inputFechaRef = useRef(null);
@@ -74,16 +74,16 @@ export const Timeline = ({ citas, recargar, fechaAgenda, setFechaAgenda, estilis
   const [filtroFechaInicio, setFiltroFechaInicio] = useState('');
   const [filtroFechaFin, setFiltroFechaFin] = useState('');
 
-  const [nuevaCita, setNuevaCita] = useState({ 
-    estilista_id: '', 
+  const [nuevaCita, setNuevaCita] = useState({
+    estilista_id: '',
     fecha: fechaAgenda,
-    hora: '09:00', 
-    cliente_id: '', 
-    duracion: 30, 
-    servicio_id: '', 
-    notas: '' 
+    hora: '09:00',
+    cliente_id: '',
+    duracion: 30,
+    servicio_id: '',
+    notas: ''
   });
-  
+
   const { agendarCita } = useCitas();
 
   useEffect(() => {
@@ -112,7 +112,7 @@ export const Timeline = ({ citas, recargar, fechaAgenda, setFechaAgenda, estilis
   const cargarCitasHistorial = async () => {
     setCargandoHistorial(true);
     try {
-      let query = supabase.from('citas').select(`*, clientes(nombre), estilistas(nombre), inventario(nombre)`).order('fecha_inicio', { ascending: false });
+      let query = supabase.from('citas').select(`*, clientes(nombre, telefono), estilistas(nombre), inventario(nombre)`).order('fecha_inicio', { ascending: false });
       if (filtroEstilista) query = query.eq('estilista_id', filtroEstilista);
       if (filtroFechaInicio) query = query.gte('fecha_inicio', `${filtroFechaInicio}T00:00:00Z`);
       if (filtroFechaFin) query = query.lte('fecha_inicio', `${filtroFechaFin}T23:59:59Z`);
@@ -137,21 +137,21 @@ export const Timeline = ({ citas, recargar, fechaAgenda, setFechaAgenda, estilis
     const h = ahora.getHours();
     const m = ahora.getMinutes();
     if (h < 7 || h >= 22) return null;
-    return 56 + ((h - 7) * 96) + (m * 96 / 60); 
+    return 56 + ((h - 7) * 96) + (m * 96 / 60);
   })();
 
   const guardarCita = async (e) => {
     e.preventDefault();
     if (!nuevaCita.cliente_id || !nuevaCita.estilista_id || !nuevaCita.servicio_id) return;
     const { error } = await agendarCita({ ...nuevaCita, fecha_inicio: `${nuevaCita.fecha}T${nuevaCita.hora}:00Z`, duracion_minutos: parseInt(nuevaCita.duracion), estatus: 'pendiente', notas: nuevaCita.notas });
-    if (!error) { 
-      await recargar(nuevaCita.fecha); 
-      setNuevaCita({ ...nuevaCita, cliente_id: '', servicio_id: '', notas: '', fecha: fechaAgenda }); 
-      setBusquedaCliente(''); 
-      setBusquedaEstilista(''); 
-      setBusquedaServicio(''); 
+    if (!error) {
+      await recargar(nuevaCita.fecha);
+      setNuevaCita({ ...nuevaCita, cliente_id: '', servicio_id: '', notas: '', fecha: fechaAgenda });
+      setBusquedaCliente('');
+      setBusquedaEstilista('');
+      setBusquedaServicio('');
       setMostrarSidebarMobile(false);
-      alert("✅ Agendada"); 
+      alert("✅ Agendada");
     }
   };
 
@@ -180,6 +180,29 @@ export const Timeline = ({ citas, recargar, fechaAgenda, setFechaAgenda, estilis
     recargar(fechaAgenda);
   };
 
+  const enviarConfirmacionWhatsApp = (cita) => {
+    const telefono = cita.clientes?.telefono;
+    if (!telefono) {
+      alert("⚠️ El cliente no tiene un número de WhatsApp registrado.");
+      return;
+    }
+
+    const nombreCliente = cita.clientes?.nombre || 'Cliente';
+    const fechaObj = new Date(cita.fecha_inicio);
+    const fecha = fechaObj.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+    const hora = formatearHora12h(cita.fecha_inicio.substring(11, 16));
+    const servicio = cita.inventario?.nombre || 'su servicio';
+    const estilista = cita.estilistas?.nombre || 'nuestro equipo';
+
+    const mensaje = `¡Hola ${nombreCliente}!  Te escribimos de Masaryk Hair Salon para recordarte tu cita para el ${fecha} a las ${hora} para ${servicio} con ${estilista}. ¿Nos podrías confirmar si asistirás? ¡Te esperamos!`;
+
+    const telLimpio = telefono.replace(/\D/g, '');
+    const telFinal = telLimpio.length === 10 ? `52${telLimpio}` : telLimpio;
+
+    const url = `https://wa.me/${telFinal}?text=${encodeURIComponent(mensaje)}`;
+    window.open(url, '_blank');
+  };
+
   const renderCell = (estId, hora) => {
     const horaNum = parseInt(hora.split(':')[0]);
     const citasIntersecan = (citas || []).filter(c => {
@@ -193,8 +216,8 @@ export const Timeline = ({ citas, recargar, fechaAgenda, setFechaAgenda, estilis
     const hasOverlaps = citasIntersecan.length > 1;
 
     return (
-      <td 
-        key={estId} 
+      <td
+        key={estId}
         className={`p-0 border-r border-white/5 h-24 relative group/cell [--stagger:10px] hover:[--stagger:45px] transition-all ${!isSelected ? 'hidden xl:table-cell' : 'table-cell'}`}
       >
         <button onClick={() => setNuevaCita({ ...nuevaCita, estilista_id: estId, hora: hora })} className="absolute inset-0 w-full h-full opacity-0 group-hover:opacity-100 group-hover:bg-[var(--color-acento)]/5 z-0 font-bold text-[var(--color-acento)]">+</button>
@@ -207,20 +230,20 @@ export const Timeline = ({ citas, recargar, fechaAgenda, setFechaAgenda, estilis
           const posIndex = citasIntersecan.findIndex(c => c.id === cita.id);
 
           return (
-              <div 
-                key={cita.id} 
-                className={`absolute rounded-xl border-l-[6px] p-2.5 shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex flex-col justify-between transition-all duration-300 hover:scale-[1.05] hover:z-[200] cursor-pointer group/card ${
-                  esPagada 
-                    ? 'bg-[#E8F5E9] border-[#10B981] text-[#1b3a1b]' 
-                    : 'bg-[#FFF9E5] border-[#D4AF37] text-[#2d2d2d]'
-                } ${hasOverlaps ? 'ring-1 ring-black/5' : ''}`} 
-                style={{ 
-                  top: `calc(${topPercent}% + 2px)`,
-                  height: `calc(${bloques * 100}% - 4px)`, 
-                  width: hasOverlaps ? '85%' : '92%',
-                  left: `calc(4% + (var(--stagger) * ${posIndex}))`,
-                  zIndex: 10 + posIndex
-                }}
+            <div
+              key={cita.id}
+              onClick={() => { setCitaEditando({ ...cita, fecha: cita.fecha_inicio.split('T')[0], hora: cita.fecha_inicio.substring(11, 16), duracion: cita.duracion_minutos }); setMostrarGestor(true); }}
+              className={`absolute rounded-xl border-l-[6px] p-2.5 shadow-[0_10px_30px_rgba(0,0,0,0.5)] flex flex-col justify-between transition-all duration-300 hover:scale-[1.05] hover:z-[200] cursor-pointer group/card ${esPagada
+                  ? 'bg-[#E8F5E9] border-[#10B981] text-[#1b3a1b]'
+                  : 'bg-[#FFF9E5] border-[#D4AF37] text-[#2d2d2d]'
+                } ${hasOverlaps ? 'ring-1 ring-black/5' : ''}`}
+              style={{
+                top: `calc(${topPercent}% + 2px)`,
+                height: `calc(${bloques * 100}% - 4px)`,
+                width: hasOverlaps ? '85%' : '92%',
+                left: `calc(4% + (var(--stagger) * ${posIndex}))`,
+                zIndex: 10 + posIndex
+              }}
             >
               <div className="flex flex-col gap-0.5 min-w-0">
                 <div className="flex justify-between items-start gap-1">
@@ -263,17 +286,17 @@ export const Timeline = ({ citas, recargar, fechaAgenda, setFechaAgenda, estilis
           <form onSubmit={guardarCita} className="space-y-3 flex-grow flex flex-col overflow-y-auto custom-scrollbar pr-1">
             <div className="space-y-1">
               <label className="text-[10px] font-black uppercase opacity-40 ml-2 text-[var(--color-texto-componente)]">Fecha</label>
-              <input type="date" className="w-full p-3 bg-[var(--color-secundario)] rounded-xl border border-[var(--color-borde)] text-white font-bold outline-none" value={nuevaCita.fecha} onChange={e => { setNuevaCita({...nuevaCita, fecha: e.target.value}); setFechaAgenda(e.target.value); }} style={{ fontSize: '0.85em' }} />
+              <input type="date" className="w-full p-3 bg-[var(--color-secundario)] rounded-xl border border-[var(--color-borde)] text-white font-bold outline-none" value={nuevaCita.fecha} onChange={e => { setNuevaCita({ ...nuevaCita, fecha: e.target.value }); setFechaAgenda(e.target.value); }} style={{ fontSize: '0.85em' }} />
             </div>
             <div className="space-y-1">
               <div className="flex justify-between items-center px-1">
                 <label className="text-[10px] font-black uppercase opacity-40 text-[var(--color-texto-componente)]">Estilista</label>
                 <button type="button" onClick={() => setModalAlta('estilista')} className="text-[var(--color-acento)] text-[9px] font-black hover:underline">+ ALTA</button>
               </div>
-              <SearchableSelect 
+              <SearchableSelect
                 options={estilistas.map(e => ({ value: e.id, label: e.nombre }))}
                 value={nuevaCita.estilista_id}
-                onChange={val => setNuevaCita({...nuevaCita, estilista_id: val})}
+                onChange={val => setNuevaCita({ ...nuevaCita, estilista_id: val })}
                 placeholder="Escoger Estilista..."
               />
             </div>
@@ -283,30 +306,30 @@ export const Timeline = ({ citas, recargar, fechaAgenda, setFechaAgenda, estilis
                 <label className="text-[10px] font-black uppercase opacity-40 text-[var(--color-texto-componente)]">Cliente</label>
                 <button type="button" onClick={() => setModalAlta('cliente')} className="text-[var(--color-acento)] text-[9px] font-black hover:underline">+ ALTA</button>
               </div>
-              <SearchableSelect 
+              <SearchableSelect
                 options={clientes.map(c => ({ value: c.id, label: c.nombre }))}
                 value={nuevaCita.cliente_id}
-                onChange={val => setNuevaCita({...nuevaCita, cliente_id: val})}
+                onChange={val => setNuevaCita({ ...nuevaCita, cliente_id: val })}
                 placeholder="Buscar Cliente..."
               />
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <select className="p-3 bg-[var(--color-secundario)] rounded-xl border border-[var(--color-borde)] font-bold text-white outline-none" value={nuevaCita.hora} onChange={e=>setNuevaCita({...nuevaCita, hora: e.target.value})} style={{ fontSize: '0.8em' }}>{HORARIOS.map(h => <option key={h} value={h}>{formatearHora12h(h)}</option>)}</select>
-              <select className="p-3 bg-[var(--color-secundario)] rounded-xl border border-[var(--color-borde)] font-bold text-white outline-none" value={nuevaCita.duracion} onChange={e=>setNuevaCita({...nuevaCita, duracion: e.target.value})} style={{ fontSize: '0.8em' }}>{OPCIONES_DURACION.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select>
+              <select className="p-3 bg-[var(--color-secundario)] rounded-xl border border-[var(--color-borde)] font-bold text-white outline-none" value={nuevaCita.hora} onChange={e => setNuevaCita({ ...nuevaCita, hora: e.target.value })} style={{ fontSize: '0.8em' }}>{HORARIOS.map(h => <option key={h} value={h}>{formatearHora12h(h)}</option>)}</select>
+              <select className="p-3 bg-[var(--color-secundario)] rounded-xl border border-[var(--color-borde)] font-bold text-white outline-none" value={nuevaCita.duracion} onChange={e => setNuevaCita({ ...nuevaCita, duracion: e.target.value })} style={{ fontSize: '0.8em' }}>{OPCIONES_DURACION.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}</select>
             </div>
             <div className="space-y-1">
               <div className="flex justify-between items-center px-1">
                 <label className="text-[10px] font-black uppercase opacity-40 text-[var(--color-texto-componente)]">Servicio</label>
                 <button type="button" onClick={() => setModalAlta('servicio')} className="text-[var(--color-acento)] text-[9px] font-black hover:underline">+ ALTA</button>
               </div>
-              <SearchableSelect 
+              <SearchableSelect
                 options={servicios.map(s => ({ value: s.id, label: s.nombre }))}
                 value={nuevaCita.servicio_id}
-                onChange={val => setNuevaCita({...nuevaCita, servicio_id: val})}
+                onChange={val => setNuevaCita({ ...nuevaCita, servicio_id: val })}
                 placeholder="Seleccionar Servicio..."
               />
             </div>
-            <textarea className="w-full p-3 bg-[var(--color-secundario)] rounded-xl border border-[var(--color-borde)] text-white font-bold outline-none resize-none min-h-[60px]" placeholder="Notas..." value={nuevaCita.notas} onChange={e => setNuevaCita({...nuevaCita, notas: e.target.value})} style={{ fontSize: '0.85em' }} />
+            <textarea className="w-full p-3 bg-[var(--color-secundario)] rounded-xl border border-[var(--color-borde)] text-white font-bold outline-none resize-none min-h-[60px]" placeholder="Notas..." value={nuevaCita.notas} onChange={e => setNuevaCita({ ...nuevaCita, notas: e.target.value })} style={{ fontSize: '0.85em' }} />
             <button type="submit" className="w-full py-3 bg-[var(--color-acento)] text-[var(--color-texto-acento)] font-black uppercase tracking-widest rounded-xl shadow-xl mt-2" style={{ fontSize: '0.8em' }}>Agendar ✨</button>
             <button type="button" onClick={() => setMostrarGestor(true)} className="w-full p-2 border-2 border-dashed border-[var(--color-borde)] text-[var(--color-texto-componente)] rounded-xl font-black uppercase opacity-60" style={{ fontSize: '0.65em' }}>🔍 Gestionar Citas</button>
           </form>
@@ -362,7 +385,7 @@ export const Timeline = ({ citas, recargar, fechaAgenda, setFechaAgenda, estilis
         <div className="fixed inset-0 z-[600] bg-black/90 backdrop-blur-md flex items-start justify-center p-4 overflow-y-auto pt-10 pb-20">
           <div className="bg-[var(--color-componente)] p-6 md:p-10 rounded-[3rem] border border-[var(--color-acento)]/30 w-full max-w-6xl shadow-2xl relative my-8">
             <button onClick={() => { setModalAlta(null); recargarMaestros(); }} className="absolute top-6 right-8 text-3xl text-[var(--color-acento)] font-black hover:scale-110 transition-transform">✕</button>
-            <div className="mt-4 w-full [&>*]:max-w-none"> 
+            <div className="mt-4 w-full [&>*]:max-w-none">
               {modalAlta === 'cliente' && <ClienteForm />}
               {modalAlta === 'estilista' && <EstilistaAdmin />}
               {modalAlta === 'servicio' && <InventarioForm />}
@@ -380,36 +403,73 @@ export const Timeline = ({ citas, recargar, fechaAgenda, setFechaAgenda, estilis
             </div>
             {citaEditando ? (
               <form onSubmit={manejarGuardarEdicion} className="p-8 space-y-4 overflow-y-auto">
+                <div className="bg-black/20 p-5 rounded-[2rem] border border-white/5 flex flex-col md:flex-row justify-between items-center gap-4 mb-4">
+                  <div>
+                    <p className="text-[10px] uppercase font-black opacity-40 ml-1">Cliente</p>
+                    <p className="font-serif italic text-2xl text-[var(--color-acento)]">{citaEditando.clientes?.nombre}</p>
+                    <p className="text-[10px] opacity-60 font-bold ml-1 tracking-widest">{citaEditando.clientes?.telefono || 'Sin teléfono'}</p>
+                  </div>
+                  {(() => {
+                    const hoy = new Date();
+                    hoy.setHours(0, 0, 0, 0);
+                    const fechaCita = new Date(citaEditando.fecha_inicio);
+                    fechaCita.setHours(0, 0, 0, 0);
+                    const esPasada = fechaCita < hoy;
+
+                    if (esPasada) return null;
+
+                    return (
+                      <button
+                        type="button"
+                        onClick={() => enviarConfirmacionWhatsApp(citaEditando)}
+                        className="bg-[#25D366] text-white px-6 py-3 rounded-2xl font-black text-[11px] flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-xl shadow-[#25D366]/20 uppercase tracking-widest"
+                      >
+                        <span>Confirmar</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                          <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.06 3.965l-1.127 4.12 4.212-1.105a7.947 7.947 0 0 0 3.788.965h.002c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z" />
+                        </svg>
+                      </button>
+                    );
+                  })()}
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1"><label className="text-[10px] uppercase opacity-50 ml-2">Fecha</label><input type="date" className="w-full p-4 rounded-xl bg-[var(--color-secundario)]" value={citaEditando.fecha} onChange={e => setCitaEditando({...citaEditando, fecha: e.target.value})} /></div>
+                  <div className="space-y-1"><label className="text-[10px] uppercase opacity-50 ml-2">Fecha</label><input type="date" disabled={citaEditando.estatus === 'pagada'} className="w-full p-4 rounded-xl bg-[var(--color-secundario)] disabled:opacity-50" value={citaEditando.fecha} onChange={e => setCitaEditando({ ...citaEditando, fecha: e.target.value })} /></div>
                   <div className="space-y-1">
                     <label className="text-[10px] uppercase opacity-50 ml-2">Estilista</label>
-                    <SearchableSelect 
+                    <SearchableSelect
                       options={estilistas.map(e => ({ value: e.id, label: e.nombre }))}
                       value={citaEditando.estilista_id}
-                      onChange={val => setCitaEditando({...citaEditando, estilista_id: val})}
+                      onChange={val => setCitaEditando({ ...citaEditando, estilista_id: val })}
                       placeholder="Escoger..."
+                      disabled={citaEditando.estatus === 'pagada'}
                     />
                   </div>
-                  <div className="space-y-1"><label className="text-[10px] uppercase opacity-50 ml-2">Hora</label><select className="w-full p-4 rounded-xl bg-[var(--color-secundario)]" value={citaEditando.hora} onChange={e => setCitaEditando({...citaEditando, hora: e.target.value})}>{HORARIOS.map(h => <option key={h} value={h}>{formatearHora12h(h)}</option>)}</select></div>
-                  <div className="space-y-1"><label className="text-[10px] uppercase opacity-50 ml-2">Duración</label><select className="w-full p-4 rounded-xl bg-[var(--color-secundario)]" value={citaEditando.duracion} onChange={e => setCitaEditando({...citaEditando, duracion: e.target.value})}>{OPCIONES_DURACION.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}</select></div>
+                  <div className="space-y-1"><label className="text-[10px] uppercase opacity-50 ml-2">Hora</label><select disabled={citaEditando.estatus === 'pagada'} className="w-full p-4 rounded-xl bg-[var(--color-secundario)] disabled:opacity-50" value={citaEditando.hora} onChange={e => setCitaEditando({ ...citaEditando, hora: e.target.value })}>{HORARIOS.map(h => <option key={h} value={h}>{formatearHora12h(h)}</option>)}</select></div>
+                  <div className="space-y-1"><label className="text-[10px] uppercase opacity-50 ml-2">Duración</label><select disabled={citaEditando.estatus === 'pagada'} className="w-full p-4 rounded-xl bg-[var(--color-secundario)] disabled:opacity-50" value={citaEditando.duracion} onChange={e => setCitaEditando({ ...citaEditando, duracion: e.target.value })}>{OPCIONES_DURACION.map(d => <option key={d.value} value={d.value}>{d.label}</option>)}</select></div>
                   <div className="md:col-span-2 space-y-1">
                     <label className="text-[10px] uppercase opacity-50 ml-2">Servicio</label>
-                    <SearchableSelect 
+                    <SearchableSelect
                       options={servicios.map(s => ({ value: s.id, label: s.nombre }))}
                       value={citaEditando.servicio_id}
-                      onChange={val => setCitaEditando({...citaEditando, servicio_id: val})}
+                      onChange={val => setCitaEditando({ ...citaEditando, servicio_id: val })}
                       placeholder="¿Qué servicio realizamos?"
+                      disabled={citaEditando.estatus === 'pagada'}
                     />
                   </div>
                 </div>
-                <div className="flex gap-4 pt-4"><button type="submit" className="flex-1 py-4 bg-[var(--color-acento)] text-black font-black uppercase rounded-xl">Guardar</button><button type="button" onClick={() => setCitaEditando(null)} className="flex-1 py-4 bg-slate-800 text-white font-black uppercase rounded-xl">Cancelar</button></div>
+                {citaEditando.estatus === 'pagada' ? (
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 p-4 rounded-xl text-center">
+                    <p className="text-emerald-500 font-black uppercase text-[10px] tracking-[0.2em]">✨ Cita Finalizada - Vista de solo lectura</p>
+                  </div>
+                ) : (
+                  <div className="flex gap-4 pt-4"><button type="submit" className="flex-1 py-4 bg-[var(--color-acento)] text-black font-black uppercase rounded-xl">Guardar</button><button type="button" onClick={() => setCitaEditando(null)} className="flex-1 py-4 bg-slate-800 text-white font-black uppercase rounded-xl">Cancelar</button></div>
+                )}
               </form>
             ) : (
               <div className="flex flex-col flex-grow overflow-hidden text-white">
                 <div className="p-4 grid grid-cols-1 md:grid-cols-4 gap-3 bg-black/20">
                   <input type="text" placeholder="Cliente..." className="p-3 rounded-xl bg-[var(--color-fondo)] outline-none border border-white/5" value={filtroTexto} onChange={e => setFiltroTexto(e.target.value)} />
-                  <SearchableSelect 
+                  <SearchableSelect
                     options={[
                       { value: '', label: 'Estilista...' },
                       ...estilistas.map(e => ({ value: e.id, label: e.nombre }))
@@ -442,8 +502,27 @@ export const Timeline = ({ citas, recargar, fechaAgenda, setFechaAgenda, estilis
                           <td className="p-4 opacity-50 uppercase text-[0.6em] truncate max-w-[150px]">{cita.inventario?.nombre}</td>
                           <td className="p-4 text-center">
                             <div className="flex justify-center gap-2">
-                              <button onClick={() => setCitaEditando({ ...cita, fecha: cita.fecha_inicio.split('T')[0], hora: cita.fecha_inicio.substring(11, 16), duracion: cita.duracion_minutos })} className="bg-amber-400 text-black px-3 py-2 rounded-lg font-black text-[0.65em]">✎ EDITAR</button>
-                              <button onClick={() => eliminarCita(cita.id)} className="bg-rose-500 text-white px-3 py-2 rounded-lg font-black text-[0.65em]">ELIMINAR</button>
+                              {(() => {
+                                const hoy = new Date();
+                                hoy.setHours(0, 0, 0, 0);
+                                const fechaCita = new Date(cita.fecha_inicio);
+                                fechaCita.setHours(0, 0, 0, 0);
+                                if (fechaCita >= hoy && cita.estatus !== 'pagada') {
+                                  return (
+                                    <button onClick={() => enviarConfirmacionWhatsApp(cita)} className="bg-[#25D366] text-white px-3 py-2 rounded-lg font-black text-[0.65em] flex items-center gap-1 hover:scale-105 transition-transform">
+                                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.06 3.965l-1.127 4.12 4.212-1.105a7.947 7.947 0 0 0 3.788.965h.002c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z" />
+                                      </svg>
+                                      <span>CONFIRMAR</span>
+                                    </button>
+                                  );
+                                }
+                                return null;
+                              })()}
+                              <button onClick={() => setCitaEditando({ ...cita, fecha: cita.fecha_inicio.split('T')[0], hora: cita.fecha_inicio.substring(11, 16), duracion: cita.duracion_minutos })} className={`${cita.estatus === 'pagada' ? 'bg-slate-700 text-white' : 'bg-amber-400 text-black'} px-3 py-2 rounded-lg font-black text-[0.65em]`}>{cita.estatus === 'pagada' ? '👁️ VER' : '✎ EDITAR'}</button>
+                              {cita.estatus !== 'pagada' && (
+                                <button onClick={() => eliminarCita(cita.id)} className="bg-rose-500 text-white px-3 py-2 rounded-lg font-black text-[0.65em]">ELIMINAR</button>
+                              )}
                             </div>
                           </td>
                         </tr>

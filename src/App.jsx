@@ -253,7 +253,7 @@ function App() {
     console.log("📅 [App] Cargando citas para:", localHoy);
     
     const { data, error } = await supabase.from('citas')
-      .select(`*, clientes(nombre), inventario(nombre, precio_venta), estilistas(nombre, comision_porcentaje)`)
+      .select(`*, clientes(nombre, telefono), inventario(nombre, precio_venta), estilistas(nombre, comision_porcentaje)`)
       .gte('fecha_inicio', `${localHoy}T00:00:00Z`)
       .lte('fecha_inicio', `${localHoy}T23:59:59Z`)
       .order('fecha_inicio', { ascending: true });
